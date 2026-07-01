@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getTransactions, addTransaction } from "../controllers/transactions.controller.js";
+import { getTransactions, addTransactions } from "../controllers/transactions.controller.js";
 import { requireAuth } from "../middleware/authe.js";
 import pool from "../db.js";
 const router = Router();
@@ -112,14 +112,38 @@ res.json({
 
 router.post('/', requireAuth, async (req, res) => {
   const { amount, type, category, date, description } = req.body;
-  const userId = req.user.userId; // from JWT
+  const parsedDate = new Date(date);
 
+  const userId = req.user.userId; // from JWT
+  if(amount === undefined || amount === null || isNaN(amount)){
+    return res.status(400).json({error: 'Amount must be a valid number'})
+  }
+
+  if(Number(amount)<=0){
+    return res.status(400).json({error : 'Amount must be greater than zero'})
+  }
+
+
+if(!category || category.trim() === ''){
+  return res.status(400).json({error : 'Category is required'})
+}
+
+if(!parsedDate || isNaN(parsedDate.getTime())){
+  return res.status(400).json({error: 'Invalid date format'})
+}
+
+if(!description || description.trim() === ''){
+  return res.status(400).json({error: 'description is required'})
+}
+if(!['income', 'expense'.includes(type)]){
+  return res.status(400).json({error:'type must either be income or expense'})
+}
   try {
     const result = await pool.query(
       `INSERT INTO transactions (amount, type, category, date, description, user_id)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [amount, type, category, date, description, userId]
+      [amount, type, category, parsedDate, description, userId]
     );
 
     res.json(result.rows[0]);
@@ -221,68 +245,116 @@ router.get("/summary/monthly", requireAuth, async (req, res) => {
   }
 });
 router.get("/summary", requireAuth, async (req, res) => {
-  const userId = req.user.userId;
-  const { startDate, endDate, type, category } = req.query;
-
-  let baseQuery = `FROM transactions WHERE user_id = $1`;
-  let params = [userId];
-
-  if (type) {
-    params.push(type);
-    baseQuery += ` AND type = $${params.length}`;
-  }
-
-  if (category) {
-    params.push(category);
-    baseQuery += ` AND category = $${params.length}`;
-  }
-
-  if (startDate) {
-    params.push(startDate);
-    baseQuery += ` AND date >= $${params.length}`;
-  }
-
-  if (endDate) {
-    params.push(endDate);
-    baseQuery += ` AND date <= $${params.length}`;
-  }
-
   try {
-    // 1. Income + Expense totals
-    const totalsQuery = `
-      SELECT 
-        SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) AS income,
-        SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) AS expenses
-      ${baseQuery}
-    `;
+    const userId = req.user.userId;
 
-    const totals = await pool.query(totalsQuery, params);
-    const row = totals.rows[0];
+    // Fetch all transactions for this user
+    const { rows: transactions } = await pool.query(
+      "SELECT * FROM transactions WHERE user_id = $1 ORDER BY date ASC",
+      [userId]
+    );
 
-    const income = Number(row.income) || 0;
-    const expenses = Number(row.expenses) || 0;
+    // Helper functions
+    const sum = arr => arr.reduce((a, b) => a + Number(b), 0);
 
-    // 2. Category breakdown
-    const categoryQuery = `
-      SELECT category, SUM(amount) AS total
-      ${baseQuery}
-      GROUP BY category
-      ORDER BY total DESC
-    `;
+    const income = sum(transactions.filter(t => t.type === "income").map(t => t.amount));
+    const expenses = sum(transactions.filter(t => t.type === "expense").map(t => t.amount));
+    const net = income - expenses;
 
-    const byCategory = await pool.query(categoryQuery, params);
+    // Date helpers
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const last30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-  res.json({
-  income,
-  expenses,
-  net: income - expenses,
-  byCategory: byCategory.rows.map(c => ({
-    category: c.category,
-    total: Number(c.total)
-  }))
+    // This month
+    const thisMonthTx = transactions.filter(t => new Date(t.date) >= startOfMonth);
+    const thisMonthIncome = sum(thisMonthTx.filter(t => t.type === "income").map(t => t.amount));
+    const thisMonthExpenses = sum(thisMonthTx.filter(t => t.type === "expense").map(t => t.amount));
+
+    // Last 30 days
+    const last30Tx = transactions.filter(t => new Date(t.date) >= last30);
+    const last30Income = sum(last30Tx.filter(t => t.type === "income").map(t => t.amount));
+    const last30Expenses = sum(last30Tx.filter(t => t.type === "expense").map(t => t.amount));
+
+    // Highest category
+    const categoryTotals = {};
+    for (const t of transactions) {
+      if (!categoryTotals[t.category]) categoryTotals[t.category] = 0;
+      categoryTotals[t.category] += Number(t.amount);
+    }
+
+    const highestCategoryEntry = Object.entries(categoryTotals)
+      .sort((a, b) => b[1] - a[1])[0];
+
+    const highestCategory = highestCategoryEntry
+      ? { category: highestCategoryEntry[0], total: highestCategoryEntry[1] }
+      : { category: null, total: 0 };
+
+    // Average daily spending (last 30 days)
+    const avgDaily = last30Expenses / 30;
+
+    // Category breakdown array
+    const byCategory = Object.entries(categoryTotals).map(([category, total]) => ({
+      category,
+      total
+    }));
+
+    res.json({
+      income,
+      expenses,
+      net,
+      thisMonth: {
+        income: thisMonthIncome,
+        expenses: thisMonthExpenses,
+        net: thisMonthIncome - thisMonthExpenses
+      },
+      last30Days: {
+        income: last30Income,
+        expenses: last30Expenses,
+        net: last30Income - last30Expenses
+      },
+      highestCategory,
+      averageDailySpending: Number(avgDaily.toFixed(2)),
+      count: transactions.length,
+      byCategory
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
 
+router.get("/trends", requireAuth, async (req, res) => {
+  const userId = req.user.userId;
+
+  try {
+    const result = await pool.query(
+      `
+      SELECT 
+        TO_CHAR(date, 'YYYY-MM') AS month,
+        SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) AS income,
+        SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) AS expenses
+      FROM transactions
+      WHERE user_id = $1
+      GROUP BY month
+      ORDER BY month DESC
+      LIMIT 6
+      `,
+      [userId]
+    );
+
+    const rows = result.rows.reverse(); // oldest → newest
+
+    const trends = rows.map(r => ({
+      month: r.month,
+      income: Number(r.income),
+      expenses: Number(r.expenses),
+      net: Number(r.income) - Number(r.expenses)
+    }));
+
+    res.json({ trends });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });

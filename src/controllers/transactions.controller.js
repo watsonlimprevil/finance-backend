@@ -27,19 +27,19 @@ export async function addTransactions(req,res){
   }
 
   if(amount <=0){
-    return res.status(400).json({error: 'Amount must be greater than zeror'})
+    return res.status(400).json({error: 'Amount must be greater than Zero'})
   }
 
   if(!type || (type !=='income' && type !=='expense')){
     return res.status(400).json({error: 'Type must income or expense'})
   }
 
-  if(!category || catgegory.trim() === ''){
+  if(!category || category.trim() === ''){
     return res.status(400).json({error: 'category is required'})
   }
 
   if(!date || isNaN(Date.parse(date))){
-    return res.status(400).json({error: 'Invalid date form'})
+    return res.status(400).json({error: 'Invalid date format'})
   }
   if(!description || description.trim()===''){
     return res.status(400).json({error: 'Description is required'})
