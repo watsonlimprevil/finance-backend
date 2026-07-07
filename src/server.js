@@ -8,34 +8,15 @@ dotenv.config();
 
 const app = express();
 
-// PRE-FLIGHT HANDLERS (NO CRASH)
-app.options('/auth/*', cors({
-    origin: [
-        'http://localhost:5173',
-        'https://finance-frontend-sandy-gamma.vercel.app'
-    ],
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
-app.options('/transactions/*', cors({
-    origin: [
-        'http://localhost:5173',
-        'https://finance-frontend-sandy-gamma.vercel.app'
-    ],
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
-// MAIN CORS
+// FIXED CORS
 app.use(cors({
-    origin:[
+    origin: [
         'http://localhost:5173',
         'https://finance-frontend-sandy-gamma.vercel.app'
     ],
-    credentials:true
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(express.json());
