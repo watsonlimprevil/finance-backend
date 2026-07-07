@@ -12,7 +12,9 @@ app.use(cors({
   origin:[
     'http://localhost:5173',
     'https://finance-frontend-sandy-gamma.vercel.app'
-  ]
+  ],
+
+  credentials:true
 }));
 app.use(express.json());
 
