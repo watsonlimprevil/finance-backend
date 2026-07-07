@@ -28,7 +28,7 @@ app.use('/transactions', transactionsRouter);
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () =>{
-  console.log(`Fimance backend running on port ${Port}`)
+  console.log(`Fimance backend running on port ${PORT}`)
 })
 
 console.log("JWT_SECRET:", process.env.JWT_SECRET);
