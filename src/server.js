@@ -8,27 +8,46 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors({
-  origin:[
-    'http://localhost:5173',
-    'https://finance-frontend-sandy-gamma.vercel.app'
-  ],
+// PRE-FLIGHT HANDLERS (NO CRASH)
+app.options('/auth/*', cors({
+    origin: [
+        'http://localhost:5173',
+        'https://finance-frontend-sandy-gamma.vercel.app'
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
-  credentials:true
+app.options('/transactions/*', cors({
+    origin: [
+        'http://localhost:5173',
+        'https://finance-frontend-sandy-gamma.vercel.app'
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// MAIN CORS
+app.use(cors({
+    origin:[
+        'http://localhost:5173',
+        'https://finance-frontend-sandy-gamma.vercel.app'
+    ],
+    credentials:true
 }));
 
 app.use(express.json());
 
-// AUTH ROUTES
+// ROUTES
 app.use('/auth', authRouter);
-
-// TRANSACTION ROUTES
 app.use('/transactions', transactionsRouter);
 
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () =>{
-  console.log(`Fimance backend running on port ${PORT}`)
-})
+    console.log(`Finance backend running on port ${PORT}`)
+});
 
 console.log("JWT_SECRET:", process.env.JWT_SECRET);
