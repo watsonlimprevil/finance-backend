@@ -25,9 +25,10 @@ app.use('/auth', authRouter);
 // TRANSACTION ROUTES
 app.use('/transactions', transactionsRouter);
 
-app.listen(5000, () => {
-  console.log('Finance backend running on port 5000');
-});
+const Port = process.env.PORT || 5000;
 
+app.listen(PORT, () =>{
+  console.log(`Fimance backend running on port ${Port}`)
+})
 
 console.log("JWT_SECRET:", process.env.JWT_SECRET);
