@@ -8,7 +8,12 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin:[
+    'http://localhost:5173',
+    'https://finance-frontend-sandy-gamma.vercel.app'
+  ]
+}));
 app.use(express.json());
 
 // AUTH ROUTES
