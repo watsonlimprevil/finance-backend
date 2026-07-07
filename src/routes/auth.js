@@ -1,9 +1,19 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
 import pool from '../db.js';
-
+import cors from 'cors'
 const router = express.Router();
 
+
+router.use(cors({
+  origin: [
+    "http://localhost:5173",
+    "https://finance-frontend-sandy-gamma.vercel.app"
+  ],
+  credentials: true,
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
 // REGISTER
 router.post('/register', async (req, res) => {
   const { email, password } = req.body;
