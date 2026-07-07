@@ -20,10 +20,10 @@ app.use(cors({
 app.use(express.json());
 
 // AUTH ROUTES
-app.use('/auth/*', authRouter);
+app.use('/auth', authRouter);
 
 // TRANSACTION ROUTES
-app.use('/transactions/*', transactionsRouter);
+app.use('/transactions', transactionsRouter);
 
 app.listen(5000, () => {
   console.log('Finance backend running on port 5000');
