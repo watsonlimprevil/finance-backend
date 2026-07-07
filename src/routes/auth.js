@@ -51,6 +51,8 @@ import jwt from 'jsonwebtoken';
 
 // LOGIN
 router.post('/login', async (req, res) => {
+  console.log("LOGIN ROUTE HIT");
+
   const { email, password } = req.body;
 
   try {
