@@ -8,25 +8,7 @@ dotenv.config();
 
 const app = express();
 
-// UNIVERSAL SAFE OPTIONS HANDLER (Express 5 compatible)
-app.use((req, res, next) => {
-  if (req.method === 'OPTIONS') {
-    res.header('Access-Control-Allow-Origin', '*');  // ⭐ FIXED
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    return res.sendStatus(200);
-  }
-  next();
-});
-app.use((req, res, next) => {
-  console.log("REQUEST:", req.method, req.url);
-  next();
-});
-
-
-
-// MAIN CORS MIDDLEWARE
+// ⭐ GLOBAL CORS — MUST be first
 app.use(cors({
   origin: [
     'http://localhost:5173',
@@ -37,16 +19,22 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+// ⭐ GLOBAL REQUEST LOGGER — tells us if ANY request reaches Express
+app.use((req, res, next) => {
+  console.log("REQUEST:", req.method, req.url);
+  next();
+});
+
+// ⭐ JSON parser
 app.use(express.json());
 
-// ROUTES
+// ⭐ ROUTES
 app.use('/auth', authRouter);
 app.use('/transactions', transactionsRouter);
 
+// ⭐ PORT
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`Finance backend running on port ${PORT}`);
 });
-
-console.log("JWT_SECRET:", process.env.JWT_SECRET);
