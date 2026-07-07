@@ -25,7 +25,7 @@ app.use('/auth', authRouter);
 // TRANSACTION ROUTES
 app.use('/transactions', transactionsRouter);
 
-const Port = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () =>{
   console.log(`Fimance backend running on port ${Port}`)
