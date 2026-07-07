@@ -8,15 +8,27 @@ dotenv.config();
 
 const app = express();
 
-// FIXED CORS
+// UNIVERSAL SAFE OPTIONS HANDLER (Express 5 compatible)
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    res.header('Access-Control-Allow-Origin', req.headers.origin);
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    return res.sendStatus(200);
+  }
+  next();
+});
+
+// MAIN CORS MIDDLEWARE
 app.use(cors({
-    origin: [
-        'http://localhost:5173',
-        'https://finance-frontend-sandy-gamma.vercel.app'
-    ],
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+  origin: [
+    'http://localhost:5173',
+    'https://finance-frontend-sandy-gamma.vercel.app'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(express.json());
@@ -27,8 +39,8 @@ app.use('/transactions', transactionsRouter);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () =>{
-    console.log(`Finance backend running on port ${PORT}`)
+app.listen(PORT, () => {
+  console.log(`Finance backend running on port ${PORT}`);
 });
 
 console.log("JWT_SECRET:", process.env.JWT_SECRET);
