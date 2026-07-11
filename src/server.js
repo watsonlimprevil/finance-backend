@@ -7,8 +7,15 @@ import transactionsRouter from './routes/transactions.js';
 dotenv.config();
 
 const app = express();
-
-app.use(cors());
+const cors = require('cors')
+const cookieParser = require('cookie-parser')
+app.use(cors({
+  origin :[
+    'http://localhost:5173',
+    'https://finance-frontend-sandy-gamma.vercel.app'
+  ],
+  credentials:true
+}))
 app.use(express.json());
 
 // AUTH ROUTES
