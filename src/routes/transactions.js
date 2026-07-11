@@ -222,66 +222,75 @@ router.get("/summary/monthly", requireAuth, async (req, res) => {
 });
 router.get("/summary", requireAuth, async (req, res) => {
   const userId = req.user.userId;
-  const { startDate, endDate, type, category } = req.query;
-
-  let baseQuery = `FROM transactions WHERE user_id = $1`;
-  let params = [userId];
-
-  if (type) {
-    params.push(type);
-    baseQuery += ` AND type = $${params.length}`;
-  }
-
-  if (category) {
-    params.push(category);
-    baseQuery += ` AND category = $${params.length}`;
-  }
-
-  if (startDate) {
-    params.push(startDate);
-    baseQuery += ` AND date >= $${params.length}`;
-  }
-
-  if (endDate) {
-    params.push(endDate);
-    baseQuery += ` AND date <= $${params.length}`;
-  }
 
   try {
-    // 1. Income + Expense totals
+    // 1. Total income + expenses
     const totalsQuery = `
       SELECT 
         SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) AS income,
         SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) AS expenses
-      ${baseQuery}
+      FROM transactions
+      WHERE user_id = $1
     `;
-
-    const totals = await pool.query(totalsQuery, params);
-    const row = totals.rows[0];
-
-    const income = Number(row.income) || 0;
-    const expenses = Number(row.expenses) || 0;
+    const totals = await pool.query(totalsQuery, [userId]);
+    const income = Number(totals.rows[0].income) || 0;
+    const expenses = Number(totals.rows[0].expenses) || 0;
 
     // 2. Category breakdown
     const categoryQuery = `
       SELECT category, SUM(amount) AS total
-      ${baseQuery}
+      FROM transactions
+      WHERE user_id = $1
       GROUP BY category
       ORDER BY total DESC
     `;
+    const byCategory = await pool.query(categoryQuery, [userId]);
 
-    const byCategory = await pool.query(categoryQuery, params);
+    // 3. This month summary
+    const thisMonthQuery = `
+      SELECT
+        SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) AS income,
+        SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) AS expenses
+      FROM transactions
+      WHERE user_id = $1
+      AND date >= date_trunc('month', CURRENT_DATE)
+    `;
+    const thisMonth = await pool.query(thisMonthQuery, [userId]);
+    const thisMonthIncome = Number(thisMonth.rows[0].income) || 0;
+    const thisMonthExpenses = Number(thisMonth.rows[0].expenses) || 0;
 
-  res.json({
-  income,
-  expenses,
-  net: income - expenses,
-  byCategory: byCategory.rows.map(c => ({
-    category: c.category,
-    total: Number(c.total)
-  }))
-});
+    // 4. Last 30 days summary
+    const last30Query = `
+      SELECT
+        SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) AS income,
+        SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) AS expenses
+      FROM transactions
+      WHERE user_id = $1
+      AND date >= CURRENT_DATE - INTERVAL '30 days'
+    `;
+    const last30 = await pool.query(last30Query, [userId]);
+    const last30Income = Number(last30.rows[0].income) || 0;
+    const last30Expenses = Number(last30.rows[0].expenses) || 0;
 
+    res.json({
+      income,
+      expenses,
+      net: income - expenses,
+      byCategory: byCategory.rows.map(c => ({
+        category: c.category,
+        total: Number(c.total)
+      })),
+      thisMonth: {
+        income: thisMonthIncome,
+        expenses: thisMonthExpenses,
+        net: thisMonthIncome - thisMonthExpenses
+      },
+      last30Days: {
+        income: last30Income,
+        expenses: last30Expenses,
+        net: last30Income - last30Expenses
+      }
+    });
 
   } catch (err) {
     console.error(err);
