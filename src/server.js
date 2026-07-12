@@ -15,7 +15,6 @@ app.use(cors({
   ],
   credentials:true
 }))
-app.options('/:rest(.*)', cors())
 
 app.use(express.json());
 
