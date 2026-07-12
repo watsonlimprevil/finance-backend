@@ -4,11 +4,10 @@ import dotenv from 'dotenv';
 import authRouter from './routes/auth.js';
 import transactionsRouter from './routes/transactions.js';
 
+
 dotenv.config();
 
 const app = express();
-
-const cookieParser = require('cookie-parser')
 app.use(cors({
   origin :[
     'http://localhost:5173',
