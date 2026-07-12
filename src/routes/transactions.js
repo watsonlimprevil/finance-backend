@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { getTransactions, addTransaction } from "../controllers/transactions.controller.js";
 import { requireAuth } from "../middleware/authe.js";
 import pool from "../db.js";
 const router = Router();
