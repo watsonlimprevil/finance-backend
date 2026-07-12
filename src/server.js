@@ -15,7 +15,8 @@ app.use(cors({
   ],
   credentials:true
 }))
-app.options('*' , cors())
+app.options('/:rest(.*)', cors())
+
 app.use(express.json());
 
 // AUTH ROUTES
