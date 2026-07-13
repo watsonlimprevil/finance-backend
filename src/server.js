@@ -13,6 +13,7 @@ app.use(cors({
     'http://localhost:5173',
     'https://finance-frontend-sandy-gamma.vercel.app',
     "https://finance-frontend-3tbgngsrr-watsonlimprevils-projects.vercel.app",
+    'https://finance-frontend-8dyz57bz1-watsonlimprevils-projects.vercel.app/'
   ],
   credentials:true
 }))
