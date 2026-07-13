@@ -297,4 +297,29 @@ router.get("/summary", requireAuth, async (req, res) => {
   }
 });
 
+router.get("/trends", requireAuth, async (req, res) => {
+  const userId = req.user.userId;
+
+  try {
+    const result = await pool.query(
+      `
+      SELECT
+        TO_CHAR(date, 'YYYY-MM') AS month,
+        SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) AS income,
+        SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) AS expenses
+      FROM transactions
+      WHERE user_id = $1
+      GROUP BY month
+      ORDER BY month ASC
+      `,
+      [userId]
+    );
+
+    res.json({ trends: result.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 export default router;
