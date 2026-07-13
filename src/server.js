@@ -6,6 +6,7 @@ import transactionsRouter from './routes/transactions.js';
 
 
 dotenv.config();
+app.options('/:path(*)', cors());
 
 const app = express();
 app.use(cors({
