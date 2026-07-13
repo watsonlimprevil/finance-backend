@@ -322,29 +322,34 @@ router.get("/trends", requireAuth, async (req, res) => {
   }
 });
 
-router.get('/search' , requireAuth , async(req,res)=>{
+router.get('/search', requireAuth, async (req, res) => {
   const userId = req.user.userId;
-  const {q} = req.query;
-  if(!q || q.trim() === ''){
-    return res.json({results: []})
+  const { q } = req.query;
+
+  if (!q || q.trim() === '') {
+    return res.json({ results: [] });
   }
 
-  try{
-const result = await pool.query(
-  `SELECT * FROM transactions 
-  WHERE user_id =$1
-  AND(
-  LOWER(description) LIKE LOWER($2)) 
-  OR LOWER(category) LIKE LOWER($2))
-  
-  ORDER BY date DESC`,
-  [userId , `%${q}`]
-)
+  try {
+    const result = await pool.query(
+      `
+      SELECT *
+      FROM transactions
+      WHERE user_id = $1
+      AND (
+        LOWER(description) LIKE LOWER($2)
+        OR LOWER(category) LIKE LOWER($2)
+      )
+      ORDER BY date DESC
+      `,
+      [userId, `%${q}%`]
+    );
 
-res.json({results: result.rows})
-  }catch(error){
-console.error(error);
-res.status(500).json({error : 'Server error'})
+    res.json({ results: result.rows });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
   }
-})
+});
+
 export default router;
