@@ -13,12 +13,19 @@ app.use(cors({
   origin: (origin, callback) => {
     const allowed = [
       "http://localhost:5173",
-      "https://finance-frontend-sandy-gamma.vercel.app",
-      "https://finance-frontend-3tbgnsrr-watsonlimprevils-projects.vercel.app",
-      "https://finance-frontend-8dyz57bz1-watsonlimprevils-projects.vercel.app"
+      /\.vercel\.app$/   // allow ANY Vercel deployment
     ];
 
-    if (!origin || allowed.includes(origin)) {
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    const isAllowed = allowed.some(rule => {
+      if (rule instanceof RegExp) return rule.test(origin);
+      return rule === origin;
+    });
+
+    if (isAllowed) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
