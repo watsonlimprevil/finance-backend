@@ -378,7 +378,7 @@ router.post('/budgets' , requireAuth , async(req, res)=>{
   try{
 const result = await pool.query(
   `INSERT INTO budgets (user_id , category, amount) 
-  VALUES ($! , $2 , $3) 
+  VALUES ($1 , $2 , $3) 
   RETURNING *` ,
   [userId , category || null , amount]
 )
