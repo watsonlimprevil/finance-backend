@@ -520,4 +520,17 @@ router.get('/budgets/progress', requireAuth, async (req, res) => {
   }
 });
 
+router.delete('/reset' , async(req,res) =>{
+  try{
+   await pool.query("DELETE FROM transactions");
+   await pool.query("DELETE FROM category_budgets")
+   await pool.query("DELETE FROM monthly_budget")
+    res.json({message : 'All data has been reset.'})
+  }catch(error){
+    console.error(error);
+    res.status(500).json({error : 'Failed to reset data '})
+
+  }
+})
+
 export default router;
