@@ -352,4 +352,172 @@ router.get('/search', requireAuth, async (req, res) => {
   }
 });
 
+router.get('/budgets' , requireAuth , async(req,res)=>{
+  const userId = req.user.userId;
+  try{
+const result = await pool.query(
+  `SELECT * FROM budgets 
+  WHERE user_id =$1 
+  ORDER BY category ASC` ,
+  [userId]
+)
+res.json({budgets: result.rows});
+  }catch(error){
+console.error(error)
+res.status(500).json({error: 'Server error'})
+  }
+})
+
+router.post('/budgets' , requireAuth , async(req, res)=>{
+  const userId = req.user.userId;
+  const{category , amount} = req.body;
+  if(!amount || amount <=0){
+    return res.status(400).json({error: 'Invalid budget'})
+  }
+
+  try{
+const result = await pool.query(
+  `INSERT INTO budgets (user_id , category, amount) 
+  VALUES ($! , $2 , $3) 
+  RETURNING *` ,
+  [userId , category || null , amount]
+)
+
+res.json({budget: result.rows[0]})
+  }catch(err){
+console.error(err);
+res.status(500).json({error: 'Server error'})
+  }
+})
+
+router.put('/budgets/:id' , requireAuth , async(req,res)=>{
+  const userId = req.user.userId;
+  const {id} = req.params;
+  const {amount} = req.body;
+  if(!amount || amount <=0){
+    return res.status(400).json({error: 'Invalid budget data'})
+  }
+
+  try{
+const result = await pool.query(
+  `UPDATE budgets 
+  SET amount = $1 
+  WHERE id=$2 AND user_id =$3 
+  RETURNING *` , [amount , id , userId]
+)
+
+res.json({budget : result.rows[0]})
+  }catch(err){
+console.error(err)
+res.status(500).json({error : 'Server error'})
+  }
+})
+
+
+router.delete('/budgets/:id' , requireAuth , async(req,res)=>{
+  const userId = req.user.userId;
+  const {id} = req.params;
+
+  try{
+await pool.query(
+  `DELETE FROM budgets 
+  WHERE id=$1 AND user_id = $2`,
+  [id, userId]
+)
+res.json({success: true});
+  }catch(error){
+console.error(error);
+res.status(500).json({error: 'Server error'})
+  }
+})
+
+router.get('/budgets/progress', requireAuth, async (req, res) => {
+  const userId = req.user.userId;
+
+  try {
+    // 1. Fetch all budgets
+    const budgetsRes = await pool.query(
+      `SELECT * FROM budgets WHERE user_id = $1`,
+      [userId]
+    );
+    const budgets = budgetsRes.rows;
+
+    // Separate monthly budget (category = null)
+    const monthlyBudget = budgets.find(b => b.category === null);
+
+    // 2. Calculate total expenses for the current month
+    const expensesRes = await pool.query(
+      `
+      SELECT COALESCE(SUM(amount), 0) AS total
+      FROM transactions
+      WHERE user_id = $1
+      AND type = 'expense'
+      AND date >= date_trunc('month', CURRENT_DATE)
+      `,
+      [userId]
+    );
+    const monthlyExpenses = Number(expensesRes.rows[0].total);
+
+    // 3. Calculate category expenses for the current month
+    const categoryRes = await pool.query(
+      `
+      SELECT category, COALESCE(SUM(amount), 0) AS total
+      FROM transactions
+      WHERE user_id = $1
+      AND type = 'expense'
+      AND date >= date_trunc('month', CURRENT_DATE)
+      GROUP BY category
+      `,
+      [userId]
+    );
+    const categoryTotals = categoryRes.rows;
+
+    // 4. Build progress results
+    const progress = {
+      monthly: null,
+      categories: []
+    };
+
+    // Monthly budget progress
+    if (monthlyBudget) {
+      const amount = Number(monthlyBudget.amount);
+      const percent = amount === 0 ? 0 : Math.min((monthlyExpenses / amount) * 100, 100);
+
+      progress.monthly = {
+        budget: amount,
+        spent: monthlyExpenses,
+        remaining: Math.max(amount - monthlyExpenses, 0),
+        percent: percent,
+        exceeded: monthlyExpenses > amount
+      };
+    }
+
+    // Category budget progress
+    for (const b of budgets) {
+      if (!b.category) continue; // skip monthly budget
+
+      const amount = Number(b.amount);
+      const categoryTotal = categoryTotals.find(c => c.category === b.category);
+      const spent = categoryTotal ? Number(categoryTotal.total) : 0;
+
+      const percent = amount === 0 ? 0 : Math.min((spent / amount) * 100, 100);
+
+      progress.categories.push({
+        category: b.category,
+        budget: amount,
+        spent,
+        remaining: Math.max(amount - spent, 0),
+        percent,
+        exceeded: spent > amount
+      });
+    }
+
+    res.json({ progress });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 export default router;
