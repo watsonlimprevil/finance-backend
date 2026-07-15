@@ -28,8 +28,14 @@ router.post('/register', async (req, res) => {
       [email, hash]
     );
 
+    const user = result.rows[0]
+    const token = jwt.sign(
+      {userId: user.id , email: user.email},
+      process.env.JWT_SECRET ,
+      {expiresIn : '7d'}
+    )
     // 4. Return user
-    res.status(201).json({ user: result.rows[0] });
+    res.status(201).json({token , user});
 
   } catch (err) {
     console.error(err);
