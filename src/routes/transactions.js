@@ -533,4 +533,20 @@ router.delete('/reset' , async(req,res) =>{
   }
 })
 
+router.patch('/budgets/monthly' , async(req,res)=>{
+  try{
+    const {budget} = req.body;
+    if(!budget || isNaN(budget)){
+      return res.status(400).json({error: 'invalid budget number'})
+    }
+    await pool.query(
+      'UPDATE monthly_budget SET amount = $1 WHERE id = 1' ,
+      [budget]
+    )
+  }catch(error){
+    console.error(error);
+    res.status(500).json({error: 'Failed to update monthly budget'})
+  }
+})
+
 export default router;
