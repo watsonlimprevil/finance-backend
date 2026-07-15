@@ -533,15 +533,16 @@ router.delete('/reset' , async(req,res) =>{
   }
 })
 
-router.patch('/budgets/monthly' , async(req,res)=>{
+router.patch('/budgets/monthly' ,requireAuth, async(req,res)=>{
   try{
+    const userId = req.user.userId
     const {budget} = req.body;
     if(!budget || isNaN(budget)){
       return res.status(400).json({error: 'invalid budget number'})
     }
     await pool.query(
-      'UPDATE monthly_budget SET amount = $1 WHERE id = 1' ,
-      [budget]
+      'UPDATE monthly_budget SET amount = $1 WHERE id = $2' ,
+      [budget , userId]
     )
   }catch(error){
     console.error(error);
