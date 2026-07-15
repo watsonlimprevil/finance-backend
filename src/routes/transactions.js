@@ -541,7 +541,7 @@ router.patch('/budgets/monthly' ,requireAuth, async(req,res)=>{
       return res.status(400).json({error: 'invalid budget number'})
     }
     await pool.query(
-      'UPDATE monthly_budget SET amount = $1 WHERE id = $2' ,
+      'UPDATE budgets SET amount = $1 WHERE id = $2' ,
       [budget , userId]
     )
   }catch(error){
